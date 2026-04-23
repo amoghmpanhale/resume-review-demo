@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Review — live demo</title>
+
+  <!-- Editorial typography: Fraunces (display serif), IBM Plex (sans + mono). -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* =======================================================================
+       DESIGN TOKENS — same palette as the reviewer, so the demo reads
+       as part of a set.
+       ======================================================================= */
+    :root {
+      --bg:             #f5f0e6;
+      --bg-elevated:    #ebe4d4;
+      --bg-card:        #faf6ec;
+      --ink:            #1a1816;
+      --ink-muted:      #5a5450;
+      --ink-faint:      #8a847e;
+      --rule:           #d6cfbf;
+      --rule-strong:    #b8ae97;
+
+      --critical:       #7a1f2b;
+      --critical-soft:  #f2d9dc;
+      --major:          #a8521e;
+      --major-soft:     #f2deca;
+      --minor:          #6b6541;
+      --minor-soft:     #e7e2ce;
+
+      --accent:         #2d4a3e;
+
+      --font-display:   'Fraunces', ui-serif, Georgia, serif;
+      --font-body:      'IBM Plex Sans', system-ui, sans-serif;
+      --font-mono:      'IBM Plex Mono', ui-monospace, monospace;
+
+      --measure:        66ch;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Subtle paper-like texture */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(0,0,0,0.02), transparent 50%),
+        radial-gradient(circle at 80% 90%, rgba(0,0,0,0.02), transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    main {
+      position: relative;
+      z-index: 1;
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 4rem 2rem 8rem;
+    }
+
+    /* =======================================================================
+       MASTHEAD (shared across every view)
+       ======================================================================= */
+    .masthead { text-align: center; margin-bottom: 3rem; }
+    .masthead__ornament {
+      font-family: var(--font-display);
+      color: var(--rule-strong);
+      font-size: 1.25rem;
+      letter-spacing: 0.5em;
+      margin-bottom: 1.5rem;
+    }
+    .masthead__eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin: 0 0 1rem;
+    }
+    .masthead__title {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: clamp(2.25rem, 5vw, 3.75rem);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+    .masthead__title em {
+      font-style: italic;
+      font-weight: 400;
+      color: var(--accent);
+    }
+
+    /* =======================================================================
+       VIEWS — only one is visible at a time. Each section below styles a
+       different step in the review flow.
+       ======================================================================= */
+    .view { display: none; }
+    .view.is-active { display: block; }
+
+    /* -----------------------------------------------------------------------
+       UPLOAD view — the landing state. Drop-zone for the resume image.
+       ----------------------------------------------------------------------- */
+    .drop-zone {
+      border: 2px dashed var(--rule-strong);
+      border-radius: 4px;
+      padding: 4rem 2rem;
+      text-align: center;
+      transition: background 0.2s, border-color 0.2s;
+      cursor: pointer;
+      display: block;
+    }
+    .drop-zone:hover,
+    .drop-zone.is-dragging {
+      background: var(--bg-elevated);
+      border-color: var(--accent);
+    }
+    .drop-zone__prompt {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 1.5rem;
+      color: var(--ink-muted);
+      margin: 0 0 0.5rem;
+    }
+    .drop-zone__hint {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    .drop-zone input[type="file"] { display: none; }
+
+    .tips {
+      margin-top: 2rem;
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 0.95rem;
+      color: var(--ink-faint);
+      text-align: center;
+      max-width: 48ch;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* -----------------------------------------------------------------------
+       PREVIEW view — shown after upload, before submit.
+       ----------------------------------------------------------------------- */
+    .preview {
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 2.5rem;
+      align-items: start;
+    }
+    @media (max-width: 720px) {
+      .preview { grid-template-columns: 1fr; }
+    }
+    .preview__image-frame {
+      background: var(--bg-card);
+      border: 1px solid var(--rule);
+      padding: 10px;
+    }
+    .preview__image {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .preview__actions h2 {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 1.4rem;
+      margin: 0 0 0.75rem;
+    }
+    .preview__actions p {
+      color: var(--ink-muted);
+      font-size: 0.95rem;
+      margin: 0 0 1.5rem;
+    }
+
+    /* -----------------------------------------------------------------------
+       BUTTONS — used in preview + error views.
+       ----------------------------------------------------------------------- */
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 0.75rem 1.25rem;
+      background: var(--ink);
+      color: var(--bg);
+      border: 1px solid var(--ink);
+      cursor: pointer;
+      transition: opacity 0.15s;
+      display: block;
+      width: 100%;
+      margin-bottom: 0.75rem;
+    }
+    .btn:hover    { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn--ghost {
+      background: transparent;
+      color: var(--ink-muted);
+      border-color: var(--rule-strong);
+    }
+
+    /* -----------------------------------------------------------------------
+       PROCESSING view — step label, progress bar, streaming peek.
+       ----------------------------------------------------------------------- */
+    .processing {
+      padding: 3rem 1rem;
+      text-align: center;
+    }
+    .processing__step {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 1.5rem;
+      color: var(--ink);
+      margin: 0 0 0.5rem;
+    }
+    .processing__substep {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin: 0 0 2rem;
+    }
+
+    .progress {
+      max-width: 520px;
+      margin: 0 auto 2rem;
+      height: 4px;
+      background: var(--rule);
+      position: relative;
+      overflow: hidden;
+    }
+    .progress__fill {
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.4s ease-out;
+    }
+
+    /* A soft pulsing shimmer while we're waiting for the first bytes */
+    .progress--indeterminate .progress__fill {
+      width: 30% !important;
+      animation: shimmer 1.6s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0%   { transform: translateX(-120%); }
+      100% { transform: translateX(400%); }
+    }
+
+    .streaming-peek {
+      max-width: 520px;
+      margin: 0 auto;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--ink-faint);
+      height: 1.6em;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      direction: rtl;    /* keeps the tail of the stream in view */
+      text-align: left;
+    }
+
+    /* -----------------------------------------------------------------------
+       ERROR view
+       ----------------------------------------------------------------------- */
+    .error {
+      padding: 3rem 1rem;
+      text-align: center;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    .error__title {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 1.5rem;
+      color: var(--critical);
+      margin: 0 0 1rem;
+    }
+    .error__message {
+      color: var(--ink-muted);
+      font-size: 0.95rem;
+      margin: 0 0 2rem;
+    }
+
+    /* =======================================================================
+       REVIEW view — summary, counts, filters, issue cards.
+       Identical structure to review_viewer.html.
+       ======================================================================= */
+    .summary__meta {
+      display: flex;
+      gap: 2rem;
+      margin: 0 0 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--rule);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .summary__meta dt { color: var(--ink-faint); margin-right: 0.5rem; display: inline; }
+    .summary__meta dd { color: var(--ink); margin: 0; display: inline; }
+    .summary__impression {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 1.4rem;
+      line-height: 1.45;
+      color: var(--ink);
+      border-left: 3px solid var(--accent);
+      padding-left: 1.5rem;
+      margin: 0 0 2.5rem;
+      max-width: var(--measure);
+    }
+
+    .counts {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      padding: 2rem 0;
+      border-top: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+    }
+    .count { text-align: center; }
+    .count__number {
+      font-family: var(--font-display);
+      font-weight: 400;
+      font-size: 4rem;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+    .count__number--critical { color: var(--critical); }
+    .count__number--major    { color: var(--major); }
+    .count__number--minor    { color: var(--minor); }
+    .count__label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin-top: 0.5rem;
+    }
+
+    .filters {
+      display: flex;
+      gap: 0.5rem;
+      margin: 3rem 0 2rem;
+      flex-wrap: wrap;
+    }
+    .filter-chip {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.5rem 1rem;
+      background: transparent;
+      border: 1px solid var(--rule-strong);
+      color: var(--ink-muted);
+      cursor: pointer;
+    }
+    .filter-chip:hover          { color: var(--ink); border-color: var(--ink-muted); }
+    .filter-chip.is-active      { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+
+    .issues { display: flex; flex-direction: column; gap: 2rem; }
+
+    .issue {
+      background: var(--bg-card);
+      border: 1px solid var(--rule);
+      padding: 2rem 2.5rem;
+    }
+    .issue__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 1.25rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--rule);
+    }
+    .issue__id {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--ink);
+      letter-spacing: 0.05em;
+    }
+    .issue__frequency {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    .issue__severity {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.7rem;
+      border-radius: 2px;
+    }
+    .issue__severity--critical { background: var(--critical-soft); color: var(--critical); }
+    .issue__severity--major    { background: var(--major-soft);    color: var(--major); }
+    .issue__severity--minor    { background: var(--minor-soft);    color: var(--minor); }
+
+    .issue__rule {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 1.5rem;
+      line-height: 1.25;
+      margin: 0 0 1rem;
+    }
+    .issue__observation {
+      font-size: 1rem;
+      line-height: 1.65;
+      color: var(--ink-muted);
+      margin: 0 0 1.5rem;
+      max-width: var(--measure);
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .comparison--single { grid-template-columns: 1fr; }
+    @media (max-width: 640px) {
+      .comparison { grid-template-columns: 1fr; }
+    }
+    .comparison__panel {
+      padding: 1rem 1.25rem;
+      background: var(--bg);
+      border-left: 3px solid var(--rule-strong);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+    .comparison__panel--fix { border-left-color: var(--accent); }
+    .comparison__label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin: 0 0 0.5rem;
+    }
+    .comparison__text { margin: 0; color: var(--ink); }
+
+    .review-footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--rule);
+      text-align: center;
+    }
+
+    /* Small disclaimer shown below every view */
+    .disclaimer {
+      margin-top: 4rem;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+  </style>
+</head>
+<body>
+
+  <main>
+    <header class="masthead">
+      <div class="masthead__ornament">§</div>
+      <p class="masthead__eyebrow">Resume Review — live demo</p>
+      <h1 class="masthead__title">A critique, backed by <em>community</em></h1>
+    </header>
+
+    <!-- =====================================================================
+         VIEW 1 — upload
+         ===================================================================== -->
+    <section class="view is-active" id="view-upload">
+      <label class="drop-zone" id="drop-zone">
+        <p class="drop-zone__prompt">Drop a screenshot of your resume here</p>
+        <p class="drop-zone__hint">or click to choose an image</p>
+        <input type="file" id="file-input" accept="image/*">
+      </label>
+      <p class="tips">
+        Works best with a clean PNG or JPG of a one-page resume.
+        Nothing is stored — the image goes straight to the model and back.
+      </p>
+    </section>
+
+    <!-- =====================================================================
+         VIEW 2 — preview
+         ===================================================================== -->
+    <section class="view" id="view-preview">
+      <div class="preview">
+        <div class="preview__image-frame">
+          <img class="preview__image" id="preview-image" alt="Your resume">
+        </div>
+        <div class="preview__actions">
+          <h2>Ready to review?</h2>
+          <p>
+            The model will score your resume against 176 rules. This usually
+            takes 30&nbsp;seconds to a few minutes — the progress bar will keep
+            you company.
+          </p>
+          <button class="btn" id="btn-start">Run the review</button>
+          <button class="btn btn--ghost" id="btn-cancel">Pick a different image</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         VIEW 3 — processing
+         ===================================================================== -->
+    <section class="view" id="view-processing">
+      <div class="processing">
+        <p class="processing__step" id="step-label">Getting started…</p>
+        <p class="processing__substep" id="step-sub">step 1 of 3</p>
+        <div class="progress" id="progress">
+          <div class="progress__fill" id="progress-fill"></div>
+        </div>
+        <p class="streaming-peek" id="stream-peek"></p>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         VIEW 4 — error
+         ===================================================================== -->
+    <section class="view" id="view-error">
+      <div class="error">
+        <p class="error__title">Something went wrong</p>
+        <p class="error__message" id="error-message">—</p>
+        <button class="btn" id="btn-retry">Try again</button>
+        <button class="btn btn--ghost" id="btn-start-over">Start over</button>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         VIEW 5 — review (populated after successful response)
+         ===================================================================== -->
+    <section class="view" id="view-review">
+      <header>
+        <dl class="summary__meta">
+          <div><dt>Experience level</dt> <dd id="exp-level">—</dd></div>
+          <div><dt>Total issues</dt>     <dd id="total-count">—</dd></div>
+        </dl>
+        <blockquote class="summary__impression" id="impression"></blockquote>
+        <div class="counts" id="counts"></div>
+      </header>
+
+      <nav class="filters" id="filters">
+        <button class="filter-chip is-active" data-severity="all">All</button>
+        <button class="filter-chip" data-severity="critical">Critical</button>
+        <button class="filter-chip" data-severity="major">Major</button>
+        <button class="filter-chip" data-severity="minor">Minor</button>
+      </nav>
+
+      <div class="issues" id="issues-list"></div>
+
+      <div class="review-footer">
+        <button class="btn btn--ghost" id="btn-new-review">Review another resume</button>
+      </div>
+    </section>
+
+    <p class="disclaimer">
+      Demo powered by the Pollinations free LLM gateway ·
+      Original tool built with the Claude API
+    </p>
+
+  </main>
+
+  <script>
+    /* =========================================================================
+       1. STATE + VIEW SWITCHING
+       The demo is a tiny state machine with five views. Exactly one is
+       visible at any time. We keep state in a plain object and re-read it
+       whenever we switch.
+       ========================================================================= */
+    const state = {
+      rubric: null,          // loaded once at startup
+      imageDataUrl: null,    // the uploaded resume, as base64 data: URL
+      review: null,          // parsed review JSON once it comes back
+      activeSeverity: "all", // current filter chip
+    };
+
+    const $ = (sel) => document.querySelector(sel);
+
+    function showView(name) {
+      for (const el of document.querySelectorAll(".view")) {
+        el.classList.toggle("is-active", el.id === `view-${name}`);
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    /* =========================================================================
+       2. STARTUP
+       Fetch the abbreviated rubric once. Everything else waits on user input.
+       ========================================================================= */
+    (async function init() {
+      try {
+        const res = await fetch("./rubric.json");
+        state.rubric = await res.json();
+      } catch (err) {
+        // The demo can't run without a rubric, so surface this immediately.
+        showError(`Couldn't load the rubric: ${err.message}`);
+      }
+    })();
+
+    /* =========================================================================
+       3. UPLOAD — accept a resume image via drop or file picker.
+       ========================================================================= */
+    const dropZone  = $("#drop-zone");
+    const fileInput = $("#file-input");
+
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files[0]) acceptImage(e.target.files[0]);
+    });
+
+    dropZone.addEventListener("dragover",  (e) => {
+      e.preventDefault();
+      dropZone.classList.add("is-dragging");
+    });
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("is-dragging");
+    });
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("is-dragging");
+      if (e.dataTransfer.files[0]) acceptImage(e.dataTransfer.files[0]);
+    });
+
+    function acceptImage(file) {
+      if (!file.type.startsWith("image/")) {
+        showError("That file doesn't look like an image. PNG or JPG, please.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        state.imageDataUrl = reader.result;
+        $("#preview-image").src = reader.result;
+        showView("preview");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    $("#btn-cancel").onclick      = () => showView("upload");
+    $("#btn-start-over").onclick  = () => showView("upload");
+    $("#btn-new-review").onclick  = () => showView("upload");
+    $("#btn-retry").onclick       = () => runReview();
+    $("#btn-start").onclick       = () => runReview();
+
+    /* =========================================================================
+       4. REVIEW PIPELINE
+       Three visible stages:
+         (1) "Reading resume"    — packaging the image (instant).
+         (2) "Analyzing…"        — the long-running LLM call, streamed.
+         (3) "Finalizing…"       — JSON parse + render.
+       ========================================================================= */
+    async function runReview() {
+      showView("processing");
+
+      setStep("Reading your resume…", "step 1 of 3", 0.05);
+
+      // Build the prompt once we know we have a rubric and image.
+      const messages = buildMessages(state.rubric, state.imageDataUrl);
+
+      try {
+        setStep("Analyzing against 176 rules…", "step 2 of 3", 0.10,
+                /*indeterminate=*/true);
+
+        const raw = await streamCompletion(messages, (chars, preview) => {
+          // Drop the indeterminate shimmer as soon as real bytes arrive.
+          setIndeterminate(false);
+          // We don't know total length, so approximate: 4 KB is a typical
+          // review payload. Cap at 90% until the stream actually finishes.
+          const pct = Math.min(0.10 + (chars / 4000) * 0.80, 0.90);
+          setProgress(pct);
+          setStreamPeek(preview);
+        });
+
+        setStep("Finalizing…", "step 3 of 3", 0.95);
+
+        state.review = extractJson(raw);
+        renderReview();
+        setProgress(1.0);
+        showView("review");
+
+      } catch (err) {
+        console.error(err);
+        showError(err.message || String(err));
+      }
+    }
+
+    /* =========================================================================
+       5. PROMPT CONSTRUCTION
+       The system prompt explains the task and hands over the rubric.  The
+       user message is the resume image plus a short instruction.
+       ========================================================================= */
+    function buildMessages(rubric, imageDataUrl) {
+      // Compact rubric into one line per rule — less token overhead than
+      // sending nested JSON, and easy for the model to scan.
+      const rubricText = rubric.rules
+        .map((r) => `${r.id} [${r.severity}/${r.category}] (freq=${r.frequency}) ${r.rule}`)
+        .join("\n");
+
+      const system = `
+You are an expert resume reviewer. The user will send you an image of a resume.
+Score the resume against the rubric below and respond with a JSON object that
+matches the SHAPE exactly — no commentary outside the JSON.
+
+RUBRIC (176 rules, each with id / severity / category / frequency / rule):
+${rubricText}
+
+OUTPUT SHAPE (respond with ONLY this JSON object):
+{
+  "experience_level_detected": "junior" | "mid" | "senior",
+  "overall_impression": "1–2 sentence plain-language summary of the resume.",
+  "issues": [
+    {
+      "rule_id":         "R001",
+      "rule_summary":    "Short summary of the rule (copy from the rubric).",
+      "frequency":       60,
+      "severity":        "critical" | "major" | "minor",
+      "observation":     "What you see in this resume that violates the rule.",
+      "current_text":    "Verbatim quote from the resume that demonstrates the issue.",
+      "suggested_fix":   "A concrete rewrite the candidate could paste in.",
+      "disagreement_note": null
+    }
+  ]
+}
+
+Guidelines:
+- Only include rules that actually apply to this resume.
+- Return 5 to 15 issues, ordered by severity (critical first) and then by frequency.
+- Every quote in "current_text" must appear verbatim in the resume.
+- Never invent metrics; if you can't find a number, leave the quote as-is and
+  suggest the candidate add one.
+- Output valid JSON only, no markdown fences.
+`.trim();
+
+      return [
+        { role: "system", content: system },
+        { role: "user",   content: [
+          { type: "text", text: "Please review the resume in this image." },
+          { type: "image_url", image_url: { url: imageDataUrl } },
+        ]},
+      ];
+    }
+
+    /* =========================================================================
+       6. STREAMING CALL TO POLLINATIONS (via a CORS proxy)
+       Pollinations' API doesn't emit CORS headers for arbitrary origins,
+       so direct browser calls from github.io fail preflight. We route
+       through corsproxy.io, a public forwarder that adds the headers.
+       Everything else is a vanilla OpenAI-compatible streaming call.
+
+       For production use, register your domain at auth.pollinations.ai,
+       get a publishable "pk_" token bound to your domain, and swap the
+       URL below for `https://text.pollinations.ai/openai?token=pk_…`.
+       ========================================================================= */
+    const POLLINATIONS_URL = "https://text.pollinations.ai/openai";
+    const API_URL          = "https://corsproxy.io/?url="
+                             + encodeURIComponent(POLLINATIONS_URL);
+
+    async function streamCompletion(messages, onProgress) {
+      let response;
+      try {
+        response = await fetch(API_URL, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model:    "openai-large",    // vision-capable
+            messages: messages,
+            stream:   true,
+            referrer: "resume-review-demo",
+            response_format: { type: "json_object" },
+          }),
+        });
+      } catch (err) {
+        // Network-level failure: proxy down, offline, etc.
+        throw new Error(
+          "Couldn't reach the LLM gateway. Check your connection and retry."
+        );
+      }
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error(
+            "The free gateway is rate-limiting right now. Wait a minute and retry."
+          );
+        }
+        throw new Error(
+          `The gateway returned ${response.status}. Try again in a moment.`
+        );
+      }
+
+      // Read the SSE stream. Each line is either "data: {chunk}" or "data: [DONE]".
+      const reader  = response.body.getReader();
+      const decoder = new TextDecoder();
+      let   buffer  = "";
+      let   output  = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();       // keep the trailing partial line
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+
+          const payload = line.slice(6).trim();
+          if (payload === "[DONE]") continue;
+
+          try {
+            const parsed = JSON.parse(payload);
+            const delta  = parsed.choices?.[0]?.delta?.content || "";
+            if (delta) {
+              output += delta;
+              onProgress(output.length, output.slice(-90));
+            }
+          } catch (_) { /* ignore parse errors on partial frames */ }
+        }
+      }
+
+      if (!output) {
+        throw new Error(
+          "The gateway returned an empty response. Try again in a moment."
+        );
+      }
+      return output;
+    }
+
+    /* =========================================================================
+       7. JSON EXTRACTION
+       LLMs sometimes wrap JSON in ```json ... ``` fences or add a preamble.
+       Pull the first top-level {...} block out before parsing.
+       ========================================================================= */
+    function extractJson(raw) {
+      const start = raw.indexOf("{");
+      const end   = raw.lastIndexOf("}");
+      if (start === -1 || end === -1) {
+        throw new Error("The model didn't return a JSON object. Try again.");
+      }
+      try {
+        return JSON.parse(raw.slice(start, end + 1));
+      } catch (err) {
+        throw new Error("The model returned malformed JSON. Try again.");
+      }
+    }
+
+    /* =========================================================================
+       8. PROCESSING UI HELPERS
+       ========================================================================= */
+    function setStep(label, sub, pct, indeterminate = false) {
+      $("#step-label").textContent = label;
+      $("#step-sub").textContent   = sub;
+      setProgress(pct);
+      setIndeterminate(indeterminate);
+    }
+    function setProgress(pct) {
+      $("#progress-fill").style.width = `${Math.round(pct * 100)}%`;
+    }
+    function setIndeterminate(on) {
+      $("#progress").classList.toggle("progress--indeterminate", on);
+    }
+    function setStreamPeek(text) {
+      $("#stream-peek").textContent = text;
+    }
+    function showError(message) {
+      $("#error-message").textContent = message;
+      showView("error");
+    }
+
+    /* =========================================================================
+       9. REVIEW RENDERING
+       Identical logic to review_viewer.html — pulled in here so the demo
+       stands alone as one file.
+       ========================================================================= */
+    const SEVERITY_ORDER = { critical: 0, major: 1, minor: 2 };
+
+    function renderReview() {
+      const { review } = state;
+      $("#exp-level").textContent   = review.experience_level_detected || "—";
+      $("#total-count").textContent = (review.issues || []).length;
+      $("#impression").textContent  = review.overall_impression || "";
+
+      renderCounts(review.issues || []);
+      renderIssues();
+      wireFilters();
+    }
+
+    function renderCounts(issues) {
+      const tally = { critical: 0, major: 0, minor: 0 };
+      for (const i of issues) if (tally[i.severity] !== undefined) tally[i.severity]++;
+      $("#counts").innerHTML = `
+        <div class="count">
+          <div class="count__number count__number--critical">${tally.critical}</div>
+          <div class="count__label">Critical</div>
+        </div>
+        <div class="count">
+          <div class="count__number count__number--major">${tally.major}</div>
+          <div class="count__label">Major</div>
+        </div>
+        <div class="count">
+          <div class="count__number count__number--minor">${tally.minor}</div>
+          <div class="count__label">Minor</div>
+        </div>
+      `;
+    }
+
+    function renderIssues() {
+      const filter = state.activeSeverity;
+      const sorted = [...(state.review.issues || [])].sort((a, b) => {
+        const d = (SEVERITY_ORDER[a.severity] ?? 99) - (SEVERITY_ORDER[b.severity] ?? 99);
+        return d !== 0 ? d : (b.frequency || 0) - (a.frequency || 0);
+      });
+      const visible = sorted.filter((i) => filter === "all" || i.severity === filter);
+
+      $("#issues-list").innerHTML = visible.length === 0
+        ? `<p class="tips">No issues at this severity.</p>`
+        : visible.map(renderIssue).join("");
+    }
+
+    function renderIssue(issue) {
+      const sev = issue.severity || "minor";
+      return `
+        <article class="issue">
+          <header class="issue__header">
+            <span class="issue__id">${escapeHtml(issue.rule_id || "")}</span>
+            <span class="issue__frequency">${issue.frequency ?? "?"} mentions</span>
+            <span class="issue__severity issue__severity--${sev}">${sev}</span>
+          </header>
+          <h2 class="issue__rule">${escapeHtml(issue.rule_summary || "")}</h2>
+          <p class="issue__observation">${escapeHtml(issue.observation || "")}</p>
+          ${renderComparison(issue)}
+        </article>
+      `;
+    }
+
+    function renderComparison(issue) {
+      const hasBefore = !!issue.current_text;
+      const hasAfter  = !!issue.suggested_fix;
+      if (!hasBefore && !hasAfter) return "";
+
+      const before = hasBefore ? `
+        <div class="comparison__panel">
+          <p class="comparison__label">As written</p>
+          <p class="comparison__text">${escapeHtml(issue.current_text)}</p>
+        </div>` : "";
+
+      const after = hasAfter ? `
+        <div class="comparison__panel comparison__panel--fix">
+          <p class="comparison__label">Suggested</p>
+          <p class="comparison__text">${escapeHtml(issue.suggested_fix)}</p>
+        </div>` : "";
+
+      const isSingle = !(hasBefore && hasAfter);
+      return `<div class="comparison ${isSingle ? "comparison--single" : ""}">${before}${after}</div>`;
+    }
+
+    function wireFilters() {
+      for (const chip of document.querySelectorAll("#filters .filter-chip")) {
+        chip.onclick = () => {
+          document.querySelectorAll("#filters .filter-chip")
+            .forEach((c) => c.classList.remove("is-active"));
+          chip.classList.add("is-active");
+          state.activeSeverity = chip.dataset.severity;
+          renderIssues();
+        };
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+  </script>
+</body>
+</html>
